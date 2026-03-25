@@ -1,10 +1,16 @@
 const SERVICES = require("../../services");
 
 export default async function handler(req, res) {
+  // If specific URLs passed, ping only those; else ping all
+  const requested = req.query.urls ? req.query.urls.split(",") : null;
+  const targets = requested
+    ? SERVICES.filter((s) => requested.includes(s.url))
+    : SERVICES;
+
   const results = [];
 
-  // Sequential pings — one by one, no overlap, no miscommunication
-  for (const svc of SERVICES) {
+  // Always sequential — one by one
+  for (const svc of targets) {
     const start = Date.now();
     let status = "error";
     let statusCode = null;
@@ -13,7 +19,7 @@ export default async function handler(req, res) {
     try {
       const response = await fetch(svc.url, {
         method: "GET",
-        signal: AbortSignal.timeout(15000), // 15s timeout per service
+        signal: AbortSignal.timeout(15000),
       });
       ms = Date.now() - start;
       statusCode = response.status;
