@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Server Keepalive</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #18181b;
+      color: #e4e4e7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; color: #f97316; }
+    p.sub { color: #71717a; font-size: 0.85rem; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; width: 100%; max-width: 900px; }
+    .card {
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .card-name { font-weight: 700; font-size: 0.88rem; color: #d4d4d8; }
+    .badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+    }
+    .badge-ok  { background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.25); }
+    .badge-err { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+    .badge-pending { background: rgba(234,179,8,0.12); color: #fde047; border: 1px solid rgba(234,179,8,0.25); }
+    .url { font-family: monospace; font-size: 0.72rem; color: #52525b; margin-bottom: 0.5rem; word-break: break-all; }
+    .meta { font-size: 0.72rem; color: #52525b; }
+    .meta span { color: #a1a1aa; }
+    .footer { margin-top: 2rem; color: #3f3f46; font-size: 0.75rem; text-align: center; }
+    .ping-all {
+      margin-bottom: 1.5rem;
+      background: #f97316; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 0.6rem 1.8rem; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .ping-all:hover { background: #ea6d08; }
+    #next-ping { color: #f97316; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Server Keepalive</h1>
+  <p class="sub">Pings all Render services every 10 minutes to prevent cold starts. Next ping in <span id="next-ping">10:00</span></p>
+  <button class="ping-all" onclick="pingAll()">Ping All Now</button>
+  <div class="grid" id="grid"></div>
+  <div class="footer">Running 24/7 on Vercel · Free tier · <a href="https://github.com/Yuvraj404s/server-keepalive" style="color:#52525b">GitHub</a></div>
+
+  <script>
+    const SERVICES = [
+      // ── GateKeeper ──────────────────────────────────────────────────
+      { project: 'GateKeeper', name: 'API Gateway',       url: 'https://gatekeeper-api-gateway.onrender.com/actuator/health' },
+      { project: 'GateKeeper', name: 'Rate Limiter',      url: 'https://gatekeeper-rate-limiter.onrender.com/actuator/health' },
+      { project: 'GateKeeper', name: 'Analytics Service', url: 'https://gatekeeper-analytics.onrender.com/analytics/health' },
+      { project: 'GateKeeper', name: 'Resource Service',  url: 'https://gatekeeper-resource.onrender.com/api/resource/health' },
+      // ── CloudSentinel ───────────────────────────────────────────────
+      { project: 'CloudSentinel', name: 'Backend', url: 'https://cloudsentinel-backend-hwfg.onrender.com/actuator/health' },
+    ]
+
+    const state = {}
+    SERVICES.forEach(s => state[s.url] = { status: 'pending', lastPing: null, ms: null })
+
+    function render() {
+      const grid = document.getElementById('grid')
+      grid.innerHTML = SERVICES.map(s => {
+        const st = state[s.url]
+        const badgeClass = st.status === 'ok' ? 'badge-ok' : st.status === 'error' ? 'badge-err' : 'badge-pending'
+        const badgeText = st.status === 'ok' ? '✅ UP' : st.status === 'error' ? '❌ DOWN' : '⏳ Pinging...'
+        return `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-name">${s.project} · ${s.name}</span>
+              <span class="badge ${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="url">${s.url}</div>
+            <div class="meta">
+              Last ping: <span>${st.lastPing || '—'}</span> &nbsp;·&nbsp;
+              Latency: <span>${st.ms ? st.ms + 'ms' : '—'}</span>
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    async function ping(s) {
+      state[s.url].status = 'pending'
+      render()
+      const t0 = Date.now()
+      try {
+        await fetch(s.url, { mode: 'no-cors' })
+        state[s.url] = { status: 'ok', lastPing: new Date().toLocaleTimeString(), ms: Date.now() - t0 }
+      } catch(e) {
+        state[s.url] = { status: 'error', lastPing: new Date().toLocaleTimeString(), ms: Date.now() - t0 }
+      }
+      render()
+    }
+
+    function pingAll() {
+      SERVICES.forEach(ping)
+      countdown = 600
+    }
+
+    // Countdown timer
+    let countdown = 600
+    setInterval(() => {
+      countdown--
+      if (countdown <= 0) { pingAll(); countdown = 600 }
+      const m = String(Math.floor(countdown / 60)).padStart(2, '0')
+      const s = String(countdown % 60).padStart(2, '0')
+      document.getElementById('next-ping').textContent = `${m}:${s}`
+    }, 1000)
+
+    // Ping immediately on load
+    pingAll()
+    render()
+  </script>
+</body>
+</html>
