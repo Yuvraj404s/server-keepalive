@@ -1,7 +1,6 @@
-const SERVICES = require("../../services");
+import { SERVICES } from "../../services";
 
 export default async function handler(req, res) {
-  // If specific URLs passed, ping only those; else ping all
   const requested = req.query.urls ? req.query.urls.split(",") : null;
   const targets = requested
     ? SERVICES.filter((s) => requested.includes(s.url))
@@ -9,7 +8,6 @@ export default async function handler(req, res) {
 
   const results = [];
 
-  // Always sequential — one by one
   for (const svc of targets) {
     const start = Date.now();
     let status = "error";
