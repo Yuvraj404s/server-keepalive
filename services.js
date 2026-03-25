@@ -12,4 +12,7 @@ const SERVICES = [
   { project: "CloudSentinel", name: "Backend",        url: "https://cloudsentinel-backend-hwfg.onrender.com/actuator/health" },
 ];
 
-module.exports = SERVICES;
+// CommonJS export for API route (server-side)
+if (typeof module !== "undefined") module.exports = SERVICES;
+// ES module default export for frontend
+export default SERVICES;
