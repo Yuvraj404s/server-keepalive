@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { SERVICES } from "../services";
 
-const INTERVAL_SECONDS = 600;
+const INTERVAL_SECONDS = 300; // 5 min — keeps Render server warm (sleeps after 15 min)
 
 export default function Home() {
   const [resultMap, setResultMap] = useState({});
@@ -62,7 +62,7 @@ export default function Home() {
     <div style={S.page}>
       <h1 style={S.title}>🛡️ Server Keepalive</h1>
       <p style={S.sub}>
-        Sequential pings every 10 min · Next in <strong style={{color:"#f97316"}}>{fmt(countdown)}</strong>
+        Sequential pings every 5 min · Next in <strong style={{color:"#f97316"}}>{fmt(countdown)}</strong>
       </p>
       <div style={S.controls}>
         <button style={S.btnPrimary} onClick={pingAll} disabled={anyPinging}>🔁 Ping All</button>
