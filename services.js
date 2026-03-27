@@ -9,7 +9,7 @@ export const SERVICES = [
   { project: "GateKeeper", name: "Resource Service",  url: "https://gatekeeper-resource.onrender.com/api/resource/health" },
 
   // CloudSentinel
-  { project: "CloudSentinel", name: "Backend", url: "https://cloudsentinel-backend-hwfg.onrender.com/actuator/health" },
+  { project: "CloudSentinel", name: "Backend", url: "https://cloudsentinel-backend-hwfg.onrender.com/api/health" },
 ];
 
 export default SERVICES;
